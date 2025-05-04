@@ -5,11 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.example.fluxodecaixa.entity.Transacao
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
@@ -22,7 +18,12 @@ class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         const val COL_TIPO = "tipo"
         const val COL_DETALHE = "detalhe"
         const val COL_VALOR = "valor"
-        const val COL_DATA_HORA = "data"
+        const val COL_DATA = "data"
+        const val ID = 0
+        const val TIPO = 1
+        const val DETALHE = 2
+        const val VALOR = 3
+        const val DATA = 4
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -33,7 +34,7 @@ class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                 $COL_TIPO TEXT,
                 $COL_DETALHE TEXT,
                 $COL_VALOR REAL,
-                $COL_DATA_HORA TEXT
+                $COL_DATA TEXT
             )
         """
         )
@@ -46,43 +47,37 @@ class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NA
 
     fun incluir(transacao : Transacao ): Long {
         val db = this.writableDatabase
+
         val values = ContentValues().apply {
             put(COL_TIPO, transacao.tipo)
             put(COL_DETALHE, transacao.detalhe)
             put(COL_VALOR, transacao.valor)
-            put(COL_DATA_HORA, transacao.data)
+            put(COL_DATA, transacao.data)
         }
 
         return db.insert(TABLE_NAME, null, values)
     }
 
-    fun alterar(transacao : Transacao ) {
-        val db = this.writableDatabase
+    fun listar(): Cursor {
+        val banco: SQLiteDatabase = this.writableDatabase
 
-        val registro = ContentValues().apply {
-            put("tipo", transacao.tipo)
-            put("detalhe", transacao.detalhe)
-            put("valor", transacao.valor)
-            put("data", transacao.data)
-        }
-
-        db.update(
+        val registros = banco.query(
             "transacao",
-            registro,
-            "_id=${transacao._id}",
+            null,
+            null,
+            null,
+            null,
+            null,
             null
         )
-    }
 
-    fun excluir( id : Int ): Int {
-        val db = this.writableDatabase
-        return db.delete( TABLE_NAME, "$COL_ID = ?", arrayOf( id.toString() ) )
+        return registros
     }
 
     fun getTodasTransacoes(): List<Transacao> {
         val lista = mutableListOf<Transacao>()
         val db = this.readableDatabase
-        val cursor = db.rawQuery("SELECT * FROM $TABLE_NAME ORDER BY $COL_DATA_HORA DESC", null)
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_NAME ORDER BY $COL_DATA DESC", null)
 
         if (cursor.moveToFirst()) {
             do {
@@ -91,7 +86,7 @@ class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NA
                     tipo = cursor.getString(cursor.getColumnIndexOrThrow(COL_TIPO)),
                     detalhe = cursor.getString(cursor.getColumnIndexOrThrow(COL_DETALHE)),
                     valor = cursor.getDouble(cursor.getColumnIndexOrThrow(COL_VALOR)),
-                    data = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATA_HORA))
+                    data = cursor.getString(cursor.getColumnIndexOrThrow(COL_DATA))
                 )
                 lista.add(transacao)
             } while (cursor.moveToNext())
@@ -100,4 +95,33 @@ class DatabaseHandler( context: Context) : SQLiteOpenHelper(context, DATABASE_NA
         cursor.close()
         return lista
     }
+
+    fun saldo(): Triple<Double, Double, Double> {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            """
+            SELECT $COL_TIPO, SUM($COL_VALOR) 
+            FROM $TABLE_NAME 
+            GROUP BY $COL_TIPO
+        """,
+            null)
+
+        var saldo = 0.0
+        var somaEntradas = 0.0
+        var somaSaidas = 0.0
+        if(cursor.moveToFirst()){
+            do {
+                if (cursor.getString(0) == "Entrada") {
+                    somaEntradas = cursor.getDouble(1)
+                } else {
+                    somaSaidas = cursor.getDouble(1)
+                }
+            } while (cursor.moveToNext())
+        }
+
+        saldo = somaEntradas - somaSaidas
+        cursor.close()
+        return Triple(saldo, somaEntradas, somaSaidas)
+    }
+
 }

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Fluxo de Caixa</string>
+    <string name="app_name">CashFlow</string>
     <string name="data_lanc">Data Lanc.</string>
     <string name="entrada">Entrada</string>
     <string name="sa_da">Saída</string>

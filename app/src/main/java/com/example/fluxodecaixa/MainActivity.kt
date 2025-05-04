@@ -1,8 +1,11 @@
 package com.example.fluxodecaixa
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.RadioButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.fluxodecaixa.database.DatabaseHandler
@@ -10,6 +13,7 @@ import com.example.fluxodecaixa.databinding.ActivityMainBinding
 import com.example.fluxodecaixa.entity.Transacao
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -19,7 +23,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
         binding = ActivityMainBinding.inflate( layoutInflater )
         setContentView( binding.main )
@@ -50,10 +53,6 @@ class MainActivity : AppCompatActivity() {
                 { _, year, month, dayOfMonth ->
                     calendario.set(year, month, dayOfMonth)
 
-                    val formatoBanco = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-//                    dataSelecionada = formatoBanco.format(calendario.time)
-
-                    // Para exibir na tela
                     val formatoVisivel = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                     val dataFormatada = formatoVisivel.format(calendario.time)
                     binding.etDataTransacao.setText(dataFormatada)
@@ -84,29 +83,63 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun btIncluirOnClick() {
-        val transacao = Transacao(
-            0,
-            binding.radioGroupTipo.checkedRadioButtonId.toString(),
-            binding.spDetalhe.selectedItem.toString(),
-            binding.etValor.editText?.text.toString().toDouble(),
-            binding.etDataTransacao.text.toString()
-        )
+        val dataText = binding.etDataTransacao.text.toString()
 
-        dbHandler.incluir(transacao)
+        val formatoVisivel = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        try {
+            val valor = binding.etValor.editText?.text.toString()
+            if (valor.isEmpty()) {
+                throw IllegalArgumentException("O valor não pode estar vazio.")
+            }
 
-        Toast.makeText(this, "Registro inserido com sucesso!", Toast.LENGTH_LONG).show()
+            if (dataText.isEmpty()) {
+                throw IllegalArgumentException("A data não pode estar vazia.")
+            }
+            val data: Date = formatoVisivel.parse(dataText) as Date
+
+            val tipo = (findViewById<RadioButton>(binding.radioGroupTipo.checkedRadioButtonId)).text.toString()
+
+            val transacao = Transacao(
+                0,
+                tipo,
+                binding.spDetalhe.selectedItem.toString(),
+                valor.toDouble(),
+                dataText
+            )
+
+            dbHandler.incluir(transacao)
+
+            Toast.makeText(this, "Registro inserido com sucesso!", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            val mensagemErro = when (e) {
+                is java.text.ParseException -> "Data inválida, favor inserir uma data no formato dd/MM/yyyy"
+                is NumberFormatException -> "Valor inválido, favor inserir um valor numérico"
+                is IllegalArgumentException -> e.message
+                else -> "Erro ao inserir o registro"
+            }
+
+            Toast.makeText(this, mensagemErro, Toast.LENGTH_LONG).show()
+            return
+        }
     }
-
 
     private fun btListarOnClick() {
-        val transacoes = dbHandler.getTodasTransacoes()
-    }
-
-    private fun btDeletarOnClick(transacao: Transacao) {
-        dbHandler.excluir(transacao._id)
+        val intent = Intent(this, ListarLancamentosActivity::class.java)
+        startActivity(intent)
     }
 
     private fun btSaldoOnClick() {
-        TODO("Not yet implemented")
+        val saldo = dbHandler.saldo()
+        val totalEntradas = saldo.second
+        val totalSaidas = saldo.third
+
+        val mensagem = "Entradas: R$ %.2f\nSaídas: R$ %.2f\n\nSaldo: R$ %.2f".format(
+            totalEntradas, totalSaidas, saldo.first
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Saldo Atual")
+            .setMessage(mensagem)
+            .setPositiveButton("OK", null)
+            .show()
     }
 }

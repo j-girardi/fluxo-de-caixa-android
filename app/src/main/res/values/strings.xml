@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">Fluxo de Caixa</string>
+    <string name="data_lanc">Data Lanc.</string>
+    <string name="entrada">Entrada</string>
+    <string name="sa_da">Saída</string>
+    <string name="detalhe">Detalhe</string>
+    <string name="valor">Valor</string>
+    <string name="selecione_a_data">Selecione a data</string>
+    <string name="saldo">Saldo</string>
+    <string name="ver_lan_amentos">Ver Lançamentos</string>
+    <string name="lan_ar">Lançar</string>
+    <string name="tipo">Tipo</string>
+
+    <string-array name="detalhes_entrada_array">
+        <item>Salário</item>
+        <item>Extras</item>
+    </string-array>
+
+    <string-array name="detalhes_saida_array">
+        <item>Alimentação</item>
+        <item>Transporte</item>
+        <item>Saúde</item>
+        <item>Moradia</item>
+    </string-array>
+
+</resources>
